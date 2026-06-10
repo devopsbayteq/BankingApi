@@ -92,9 +92,13 @@ public class MockTransactionService : ITransactionService
                 var isCredit = rng.NextDouble() > 0.5;
                 var amount = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
                 balance += isCredit ? amount : -amount;
+                var amount = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
+                balance += isCredit ? amount : -amount;
 
                 transactions.Add(new Transaction
                 {
+                    TransactionId = $"TXN-{accountId}-{i:D3}",
+                    AccountId = accountId,
                     TransactionId = $"TXN-{accountId}-{i:D3}",
                     AccountId = accountId,
                     TransactionDate = baseDate.AddDays(-i).AddHours(rng.Next(0, 23)).AddMinutes(rng.Next(0, 59)),

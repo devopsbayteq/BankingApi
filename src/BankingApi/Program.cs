@@ -18,18 +18,18 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title       = "Banking Transactions API",
-        Version     = "v1",
+        Title = "Banking Transactions API",
+        Version = "v1",
         Description = "Mock REST API that exposes account movements. Compliant with OpenAPI 3.0.",
-        Contact     = new OpenApiContact
+        Contact = new OpenApiContact
         {
-            Name  = "DevOps Banking Team",
+            Name = "DevOps Banking Team",
             Email = "devops@bankingapi.example.com"
         },
         License = new OpenApiLicense
         {
             Name = "MIT",
-            Url  = new Uri("https://opensource.org/licenses/MIT")
+            Url = new Uri("https://opensource.org/licenses/MIT")
         }
     });
 
@@ -44,11 +44,11 @@ builder.Services.AddSwaggerGen(options =>
     // Security definition placeholder (Bearer JWT) — no real auth in mock
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        In          = ParameterLocation.Header,
+        In = ParameterLocation.Header,
         Description = "JWT Authorization header. Example: 'Bearer {token}'",
-        Name        = "Authorization",
-        Type        = SecuritySchemeType.Http,
-        Scheme      = "bearer",
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT"
     });
 });
