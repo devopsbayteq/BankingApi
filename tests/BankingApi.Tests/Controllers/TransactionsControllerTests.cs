@@ -37,8 +37,8 @@ public class TransactionsControllerTests : IClassFixture<WebApplicationFactory<P
     public async Task GetTransactions_ValidAccount_ReturnsPagedResponse()
     {
         var response = await _client.GetAsync("/api/v1/accounts/ACC-001/transactions");
-        var body     = await response.Content.ReadAsStringAsync();
-        var paged    = JsonSerializer.Deserialize<PagedResponse<Transaction>>(body, _jsonOptions);
+        var body = await response.Content.ReadAsStringAsync();
+        var paged = JsonSerializer.Deserialize<PagedResponse<Transaction>>(body, _jsonOptions);
 
         paged.Should().NotBeNull();
         paged!.Data.Should().NotBeEmpty();
@@ -111,8 +111,8 @@ public class TransactionsControllerTests : IClassFixture<WebApplicationFactory<P
     [Fact]
     public async Task GetTransactionById_ValidIds_ReturnsTransactionObject()
     {
-        var response    = await _client.GetAsync("/api/v1/accounts/ACC-001/transactions/TXN-ACC-001-001");
-        var body        = await response.Content.ReadAsStringAsync();
+        var response = await _client.GetAsync("/api/v1/accounts/ACC-001/transactions/TXN-ACC-001-001");
+        var body = await response.Content.ReadAsStringAsync();
         var transaction = JsonSerializer.Deserialize<Transaction>(body, _jsonOptions);
 
         transaction.Should().NotBeNull();

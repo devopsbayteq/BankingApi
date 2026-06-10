@@ -19,7 +19,7 @@ public class TransactionsController : ControllerBase
     public TransactionsController(ITransactionService service, ILogger<TransactionsController> logger)
     {
         _service = service;
-        _logger  = logger;
+        _logger = logger;
     }
 
     // ------------------------------------------------------------------ //
@@ -37,21 +37,21 @@ public class TransactionsController : ControllerBase
     /// <param name="type">Filter by type: DEBIT or CREDIT.</param>
     [HttpGet]
     [SwaggerOperation(
-        Summary     = "List account transactions",
+        Summary = "List account transactions",
         Description = "Returns a paginated, filterable list of movements for the specified account.",
         OperationId = "GetTransactions",
-        Tags        = ["Transactions"])]
+        Tags = ["Transactions"])]
     [SwaggerResponse(200, "Transactions retrieved successfully.", typeof(PagedResponse<Transaction>))]
-    [SwaggerResponse(400, "Invalid request parameters.",           typeof(ErrorResponse))]
-    [SwaggerResponse(404, "Account not found.",                    typeof(ErrorResponse))]
-    [SwaggerResponse(500, "Internal server error.",                typeof(ErrorResponse))]
+    [SwaggerResponse(400, "Invalid request parameters.", typeof(ErrorResponse))]
+    [SwaggerResponse(404, "Account not found.", typeof(ErrorResponse))]
+    [SwaggerResponse(500, "Internal server error.", typeof(ErrorResponse))]
     public async Task<IActionResult> GetTransactions(
         [FromRoute] string accountId,
-        [FromQuery] int page     = 1,
+        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] DateTime? from = null,
-        [FromQuery] DateTime? to   = null,
-        [FromQuery] string? type   = null)
+        [FromQuery] DateTime? to = null,
+        [FromQuery] string? type = null)
     {
         _logger.LogInformation("Fetching transactions for account {AccountId}, page {Page}", accountId, page);
 
@@ -86,13 +86,13 @@ public class TransactionsController : ControllerBase
     /// <param name="transactionId">Unique transaction identifier.</param>
     [HttpGet("{transactionId}")]
     [SwaggerOperation(
-        Summary     = "Get a single transaction",
+        Summary = "Get a single transaction",
         Description = "Returns the full details of one transaction belonging to the specified account.",
         OperationId = "GetTransactionById",
-        Tags        = ["Transactions"])]
+        Tags = ["Transactions"])]
     [SwaggerResponse(200, "Transaction retrieved successfully.", typeof(Transaction))]
-    [SwaggerResponse(404, "Account or transaction not found.",   typeof(ErrorResponse))]
-    [SwaggerResponse(500, "Internal server error.",              typeof(ErrorResponse))]
+    [SwaggerResponse(404, "Account or transaction not found.", typeof(ErrorResponse))]
+    [SwaggerResponse(500, "Internal server error.", typeof(ErrorResponse))]
     public async Task<IActionResult> GetTransactionById(
         [FromRoute] string accountId,
         [FromRoute] string transactionId)

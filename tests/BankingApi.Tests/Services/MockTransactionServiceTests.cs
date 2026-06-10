@@ -99,7 +99,7 @@ public class MockTransactionServiceTests
     public async Task GetTransactionsAsync_DateRange_FiltersCorrectly()
     {
         var from = DateTime.UtcNow.AddDays(-10);
-        var to   = DateTime.UtcNow.AddDays(-1);
+        var to = DateTime.UtcNow.AddDays(-1);
 
         var result = await _sut.GetTransactionsAsync("ACC-001", 1, 100, from, to, null);
 

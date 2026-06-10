@@ -112,7 +112,7 @@ public class MockTransactionService : ITransactionService
 
         string[] categories = ["Transfer", "Payment", "Deposit", "Withdrawal", "Fee", "Interest"];
         string[] creditDescs = ["Salary deposit", "Transfer received", "Interest earned", "Refund", "Deposit ATM"];
-        string[] debitDescs  = ["Utility payment", "Online purchase", "ATM withdrawal", "Service fee", "Wire transfer"];
+        string[] debitDescs = ["Utility payment", "Online purchase", "ATM withdrawal", "Service fee", "Wire transfer"];
 
         foreach (var (accountId, startBalance) in seeds)
         {
@@ -122,23 +122,23 @@ public class MockTransactionService : ITransactionService
             for (int i = 1; i <= 30; i++)
             {
                 var isCredit = rng.NextDouble() > 0.5;
-                var amount   = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
-                balance     += isCredit ? amount : -amount;
+                var amount = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
+                balance += isCredit ? amount : -amount;
 
                 transactions.Add(new Transaction
                 {
-                    TransactionId   = $"TXN-{accountId}-{i:D3}",
-                    AccountId       = accountId,
+                    TransactionId = $"TXN-{accountId}-{i:D3}",
+                    AccountId = accountId,
                     TransactionDate = baseDate.AddDays(-i).AddHours(rng.Next(0, 23)).AddMinutes(rng.Next(0, 59)),
-                    Description     = isCredit
+                    Description = isCredit
                                         ? creditDescs[rng.Next(creditDescs.Length)]
                                         : debitDescs[rng.Next(debitDescs.Length)],
-                    Amount          = isCredit ? amount : -amount,
-                    RunningBalance  = Math.Round(balance, 2),
-                    Type            = isCredit ? "CREDIT" : "DEBIT",
-                    Category        = categories[rng.Next(categories.Length)],
-                    Status          = "COMPLETED",
-                    Currency        = "USD"
+                    Amount = isCredit ? amount : -amount,
+                    RunningBalance = Math.Round(balance, 2),
+                    Type = isCredit ? "CREDIT" : "DEBIT",
+                    Category = categories[rng.Next(categories.Length)],
+                    Status = "COMPLETED",
+                    Currency = "USD"
                 });
             }
         }
