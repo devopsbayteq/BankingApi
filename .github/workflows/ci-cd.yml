@@ -148,6 +148,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0   # SonarCloud needs full history
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup .NET ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v4
@@ -161,23 +162,24 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
 
-      - name: Install dotnet-format tool
-        run: dotnet tool install -g dotnet-format
-
       - name: Restore dependencies
         run: dotnet restore ${{ env.SOLUTION_PATH }}
 
-      - name: Check code formatting (Roslyn)
+      - name: Auto-format code (Roslyn)
         run: |
           dotnet format ${{ env.SOLUTION_PATH }} \
             --severity warn \
             --verbosity normal
+
       - name: Commit formatting fixes (if any)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
           git diff --quiet || (git add -A && git commit -m "style: auto-format via dotnet format [skip ci]" && git push)
+
       - name: Build with Roslyn analyzers
         run: |
           dotnet build ${{ env.SOLUTION_PATH }} \
@@ -185,25 +187,24 @@ jobs:
             --no-restore \
             -p:RunAnalyzersDuringBuild=true \
             -p:EnableNETAnalyzers=true \
-            -p:AnalysisMode=All \
-            -p:TreatWarningsAsErrors=false \
-            -warnAsError
+            -p:AnalysisMode=Recommended \
+            -p:TreatWarningsAsErrors=true
 
       # ----- SonarCloud (optional — requires secrets) -----
-      # - name: SonarCloud Scan
-      #  if: ${{ secrets.SONAR_TOKEN != '' }}
-      #  uses: SonarSource/sonarcloud-github-action@master
-      #  env:
-      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #  with:
-      #    args: >
-      #      -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-      #      -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
-      #      -Dsonar.sources=src/
-      #      -Dsonar.tests=tests/
-      #      -Dsonar.cs.opencover.reportsPaths=**/coverage.cobertura.xml
-      #      -Dsonar.cs.dotcover.reportsPaths=**/coverage.cobertura.xml
+      - name: SonarCloud Scan
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.sources=src/
+            -Dsonar.tests=tests/
+            -Dsonar.cs.opencover.reportsPaths=**/coverage.cobertura.xml
+            -Dsonar.cs.dotcover.reportsPaths=**/coverage.cobertura.xml
 
 # ============================================================
 # JOB 4 — SECURITY SCANNING

@@ -5,9 +5,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace BankingApi.Controllers;
 
-/// <summary>
-/// Provides account summary information.
-/// </summary>
+/// <summary>Provides account summary information.</summary>
 [ApiController]
 [Route("api/v1/accounts")]
 [Produces("application/json")]
@@ -19,22 +17,20 @@ public class AccountsController : ControllerBase
     public AccountsController(ITransactionService service, ILogger<AccountsController> logger)
     {
         _service = service;
-        _logger  = logger;
+        _logger = logger;
     }
 
-    /// <summary>
-    /// Returns the details of a specific account.
-    /// </summary>
+    /// <summary>Returns the details of a specific account.</summary>
     /// <param name="accountId">Unique account identifier (e.g., ACC-001, ACC-002, ACC-003).</param>
     [HttpGet("{accountId}")]
     [SwaggerOperation(
-        Summary     = "Get account details",
+        Summary = "Get account details",
         Description = "Returns summary information for the specified account.",
         OperationId = "GetAccount",
-        Tags        = ["Accounts"])]
+        Tags = ["Accounts"])]
     [SwaggerResponse(200, "Account retrieved successfully.", typeof(Account))]
-    [SwaggerResponse(404, "Account not found.",              typeof(ErrorResponse))]
-    [SwaggerResponse(500, "Internal server error.",          typeof(ErrorResponse))]
+    [SwaggerResponse(404, "Account not found.", typeof(ErrorResponse))]
+    [SwaggerResponse(500, "Internal server error.", typeof(ErrorResponse))]
     public async Task<IActionResult> GetAccount([FromRoute] string accountId)
     {
         _logger.LogInformation("Fetching account {AccountId}", accountId);
@@ -43,11 +39,7 @@ public class AccountsController : ControllerBase
         if (account is null)
         {
             _logger.LogWarning("Account {AccountId} not found", accountId);
-            return NotFound(new ErrorResponse
-            {
-                StatusCode = 404,
-                Message    = $"Account '{accountId}' not found."
-            });
+            return NotFound(new ErrorResponse { StatusCode = 404, Message = $"Account '{accountId}' not found." });
         }
 
         return Ok(account);

@@ -11,10 +11,6 @@ public class MockTransactionService : ITransactionService
     private static readonly List<Account> _accounts = GenerateAccounts();
     private static readonly List<Transaction> _transactions = GenerateTransactions();
 
-    // ------------------------------------------------------------------ //
-    //  Public API
-    // ------------------------------------------------------------------ //
-
     public Task<Account?> GetAccountAsync(string accountId)
     {
         var account = _accounts.FirstOrDefault(a =>
@@ -27,7 +23,7 @@ public class MockTransactionService : ITransactionService
         int page,
         int pageSize,
         DateTime? from,
-        DateTime? to,
+        DateTime? toDate,
         string? type)
     {
         var query = _transactions
@@ -36,8 +32,8 @@ public class MockTransactionService : ITransactionService
         if (from.HasValue)
             query = query.Where(t => t.TransactionDate >= from.Value);
 
-        if (to.HasValue)
-            query = query.Where(t => t.TransactionDate <= to.Value);
+        if (toDate.HasValue)
+            query = query.Where(t => t.TransactionDate <= toDate.Value);
 
         if (!string.IsNullOrWhiteSpace(type))
             query = query.Where(t => t.Type.Equals(type, StringComparison.OrdinalIgnoreCase));
@@ -66,53 +62,25 @@ public class MockTransactionService : ITransactionService
         return Task.FromResult(transaction);
     }
 
-    // ------------------------------------------------------------------ //
-    //  Seed data generators
-    // ------------------------------------------------------------------ //
-
     private static List<Account> GenerateAccounts() =>
     [
-        new Account
-        {
-            AccountId = "ACC-001",
-            HolderName = "Maria Garcia",
-            AccountType = "Checking",
-            Balance = 4_250.75m,
-            Currency = "USD"
-        },
-        new Account
-        {
-            AccountId = "ACC-002",
-            HolderName = "Carlos Mendez",
-            AccountType = "Savings",
-            Balance = 12_800.00m,
-            Currency = "USD"
-        },
-        new Account
-        {
-            AccountId = "ACC-003",
-            HolderName = "Ana Torres",
-            AccountType = "Checking",
-            Balance = 800.20m,
-            Currency = "USD"
-        }
+        new Account { AccountId = "ACC-001", HolderName = "Maria Garcia",  AccountType = "Checking", Balance = 4_250.75m,  Currency = "USD" },
+        new Account { AccountId = "ACC-002", HolderName = "Carlos Mendez", AccountType = "Savings",  Balance = 12_800.00m, Currency = "USD" },
+        new Account { AccountId = "ACC-003", HolderName = "Ana Torres",    AccountType = "Checking", Balance = 800.20m,    Currency = "USD" },
     ];
 
     private static List<Transaction> GenerateTransactions()
     {
         var transactions = new List<Transaction>();
-        var rng = new Random(42); // fixed seed → deterministic results
 
-        var seeds = new[]
-        {
-            ("ACC-001", 4_250.75m),
-            ("ACC-002", 12_800.00m),
-            ("ACC-003", 800.20m)
-        };
+        // Fixed seed → deterministic results (mock data only, no security use)
+        var rng = new Random(42);
 
-        string[] categories = ["Transfer", "Payment", "Deposit", "Withdrawal", "Fee", "Interest"];
-        string[] creditDescs = ["Salary deposit", "Transfer received", "Interest earned", "Refund", "Deposit ATM"];
-        string[] debitDescs  = ["Utility payment", "Online purchase", "ATM withdrawal", "Service fee", "Wire transfer"];
+        var seeds = new[] { ("ACC-001", 4_250.75m), ("ACC-002", 12_800.00m), ("ACC-003", 800.20m) };
+
+        string[] categories    = ["Transfer", "Payment", "Deposit", "Withdrawal", "Fee", "Interest"];
+        string[] creditDescs   = ["Salary deposit", "Transfer received", "Interest earned", "Refund", "Deposit ATM"];
+        string[] debitDescs    = ["Utility payment", "Online purchase", "ATM withdrawal", "Service fee", "Wire transfer"];
 
         foreach (var (accountId, startBalance) in seeds)
         {
@@ -122,23 +90,21 @@ public class MockTransactionService : ITransactionService
             for (int i = 1; i <= 30; i++)
             {
                 var isCredit = rng.NextDouble() > 0.5;
-                var amount   = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
-                balance     += isCredit ? amount : -amount;
+                var amount = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
+                balance += isCredit ? amount : -amount;
 
                 transactions.Add(new Transaction
                 {
-                    TransactionId   = $"TXN-{accountId}-{i:D3}",
-                    AccountId       = accountId,
+                    TransactionId = $"TXN-{accountId}-{i:D3}",
+                    AccountId = accountId,
                     TransactionDate = baseDate.AddDays(-i).AddHours(rng.Next(0, 23)).AddMinutes(rng.Next(0, 59)),
-                    Description     = isCredit
-                                        ? creditDescs[rng.Next(creditDescs.Length)]
-                                        : debitDescs[rng.Next(debitDescs.Length)],
-                    Amount          = isCredit ? amount : -amount,
-                    RunningBalance  = Math.Round(balance, 2),
-                    Type            = isCredit ? "CREDIT" : "DEBIT",
-                    Category        = categories[rng.Next(categories.Length)],
-                    Status          = "COMPLETED",
-                    Currency        = "USD"
+                    Description = isCredit ? creditDescs[rng.Next(creditDescs.Length)] : debitDescs[rng.Next(debitDescs.Length)],
+                    Amount = isCredit ? amount : -amount,
+                    RunningBalance = Math.Round(balance, 2),
+                    Type = isCredit ? "CREDIT" : "DEBIT",
+                    Category = categories[rng.Next(categories.Length)],
+                    Status = "COMPLETED",
+                    Currency = "USD"
                 });
             }
         }

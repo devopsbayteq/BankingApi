@@ -1,0 +1,39 @@
+root = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# CA1515: Types in web apps don't need to be internal — controllers/models are used by ASP.NET runtime
+dotnet_diagnostic.CA1515.severity = none
+
+# CA1707: Underscores in test method names are a widely accepted convention (Given_When_Then)
+dotnet_diagnostic.CA1707.severity = none
+
+# CA2007: ConfigureAwait not needed in ASP.NET Core (no SynchronizationContext)
+dotnet_diagnostic.CA2007.severity = none
+
+# CA1848: LoggerMessage delegates add complexity not warranted in a mock/demo service
+dotnet_diagnostic.CA1848.severity = none
+
+# CA2234: GetAsync(string) vs GetAsync(Uri) — string overload is fine in tests
+dotnet_diagnostic.CA2234.severity = none
+
+# CA1062: Null validation on framework-injected params (HttpContext, WebApplicationFactory) is redundant
+dotnet_diagnostic.CA1062.severity = none
+
+# CA1031: Global exception middleware MUST catch Exception — that is its entire purpose
+dotnet_diagnostic.CA1031.severity = none
+
+# CA1869: JsonSerializerOptions — suppressed in error-path middleware (rarely called)
+dotnet_diagnostic.CA1869.severity = none
+
+# CA1716: 'to' parameter name conflict with VB keyword — not relevant for a C#-only project
+dotnet_diagnostic.CA1716.severity = none
+
+# CA5394: Random used only for deterministic mock seed data, not security
+dotnet_diagnostic.CA5394.severity = none
