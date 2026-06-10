@@ -62,54 +62,64 @@ public class MockTransactionService : ITransactionService
         return Task.FromResult(transaction);
     }
 
-    private static List<Account> GenerateAccounts() =>
-    [
-        new Account { AccountId = "ACC-001", HolderName = "Maria Garcia",  AccountType = "Checking", Balance = 4_250.75m,  Currency = "USD" },
-        new Account { AccountId = "ACC-002", HolderName = "Carlos Mendez", AccountType = "Savings",  Balance = 12_800.00m, Currency = "USD" },
-        new Account { AccountId = "ACC-003", HolderName = "Ana Torres",    AccountType = "Checking", Balance = 800.20m,    Currency = "USD" },
-    ];
+    private static List<Account> GenerateAccounts()
+    {
+        return new List<Account>
+        {
+            new Account { AccountId = "ACC-001", HolderName = "Maria Garcia",  AccountType = "Checking", Balance = 4_250.75m,  Currency = "USD" },
+            new Account { AccountId = "ACC-002", HolderName = "Carlos Mendez", AccountType = "Savings",  Balance = 12_800.00m, Currency = "USD" },
+            new Account { AccountId = "ACC-003", HolderName = "Ana Torres",    AccountType = "Checking", Balance = 800.20m,    Currency = "USD" },
+        };
+    }
 
     private static List<Transaction> GenerateTransactions()
     {
         var transactions = new List<Transaction>();
 
-        // Fixed seed → deterministic results (mock data only, no security use)
+        // Fixed seed → deterministic results (mock data only, not used for security)
         var rng = new Random(42);
 
-        var seeds = new[] { ("ACC-001", 4_250.75m), ("ACC-002", 12_800.00m), ("ACC-003", 800.20m) };
-
-        string[] categories    = ["Transfer", "Payment", "Deposit", "Withdrawal", "Fee", "Interest"];
-        string[] creditDescs   = ["Salary deposit", "Transfer received", "Interest earned", "Refund", "Deposit ATM"];
-        string[] debitDescs    = ["Utility payment", "Online purchase", "ATM withdrawal", "Service fee", "Wire transfer"];
-
-        foreach (var (accountId, startBalance) in seeds)
+        var seeds = new (string AccountId, decimal StartBalance)[]
         {
-            var balance = startBalance;
+            ("ACC-001", 4_250.75m),
+            ("ACC-002", 12_800.00m),
+            ("ACC-003", 800.20m)
+        };
+
+        var categories  = new string[] { "Transfer", "Payment", "Deposit", "Withdrawal", "Fee", "Interest" };
+        var creditDescs = new string[] { "Salary deposit", "Transfer received", "Interest earned", "Refund", "Deposit ATM" };
+        var debitDescs  = new string[] { "Utility payment", "Online purchase", "ATM withdrawal", "Service fee", "Wire transfer" };
+
+        foreach (var seed in seeds)
+        {
+            var balance  = seed.StartBalance;
             var baseDate = DateTime.UtcNow.Date;
 
             for (int i = 1; i <= 30; i++)
             {
-                var isCredit = rng.NextDouble() > 0.5;
-                var amount = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
-                balance += isCredit ? amount : -amount;
-                var amount = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
-                balance += isCredit ? amount : -amount;
+                var isCredit    = rng.NextDouble() > 0.5;
+                var txnAmount   = Math.Round((decimal)(rng.NextDouble() * 1_000 + 10), 2);
+                balance        += isCredit ? txnAmount : -txnAmount;
 
-                transactions.Add(new Transaction
+                var txn = new Transaction
                 {
-                    TransactionId = $"TXN-{accountId}-{i:D3}",
-                    AccountId = accountId,
-                    TransactionId = $"TXN-{accountId}-{i:D3}",
-                    AccountId = accountId,
-                    TransactionDate = baseDate.AddDays(-i).AddHours(rng.Next(0, 23)).AddMinutes(rng.Next(0, 59)),
-                    Description = isCredit ? creditDescs[rng.Next(creditDescs.Length)] : debitDescs[rng.Next(debitDescs.Length)],
-                    Amount = isCredit ? amount : -amount,
-                    RunningBalance = Math.Round(balance, 2),
-                    Type = isCredit ? "CREDIT" : "DEBIT",
-                    Category = categories[rng.Next(categories.Length)],
-                    Status = "COMPLETED",
-                    Currency = "USD"
-                });
+                    TransactionId   = $"TXN-{seed.AccountId}-{i:D3}",
+                    AccountId       = seed.AccountId,
+                    TransactionDate = baseDate.AddDays(-i)
+                                             .AddHours(rng.Next(0, 23))
+                                             .AddMinutes(rng.Next(0, 59)),
+                    Description     = isCredit
+                                        ? creditDescs[rng.Next(creditDescs.Length)]
+                                        : debitDescs[rng.Next(debitDescs.Length)],
+                    Amount          = isCredit ? txnAmount : -txnAmount,
+                    RunningBalance  = Math.Round(balance, 2),
+                    Type            = isCredit ? "CREDIT" : "DEBIT",
+                    Category        = categories[rng.Next(categories.Length)],
+                    Status          = "COMPLETED",
+                    Currency        = "USD"
+                };
+
+                transactions.Add(txn);
             }
         }
 
