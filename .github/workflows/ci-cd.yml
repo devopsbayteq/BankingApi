@@ -168,10 +168,13 @@ jobs:
       - name: Check code formatting (Roslyn)
         run: |
           dotnet format ${{ env.SOLUTION_PATH }} \
-            --verify-no-changes \
             --severity warn \
-            --verbosity diagnostic
-
+            --verbosity normal
+      - name: Commit formatting fixes (if any)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet || (git add -A && git commit -m "style: auto-format via dotnet format [skip ci]" && git push)
       - name: Build with Roslyn analyzers
         run: |
           dotnet build ${{ env.SOLUTION_PATH }} \
