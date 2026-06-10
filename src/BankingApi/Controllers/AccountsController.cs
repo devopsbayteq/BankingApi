@@ -18,7 +18,6 @@ public class AccountsController : ControllerBase
     {
         _service = service;
         _logger = logger;
-        _logger = logger;
     }
 
     /// <summary>Returns the details of a specific account.</summary>
@@ -26,14 +25,10 @@ public class AccountsController : ControllerBase
     [HttpGet("{accountId}")]
     [SwaggerOperation(
         Summary = "Get account details",
-        Summary = "Get account details",
         Description = "Returns summary information for the specified account.",
         OperationId = "GetAccount",
-        Tags = ["Accounts"])]
-        Tags = ["Accounts"])]
+        Tags = new[] { "Accounts" })]
     [SwaggerResponse(200, "Account retrieved successfully.", typeof(Account))]
-    [SwaggerResponse(404, "Account not found.", typeof(ErrorResponse))]
-    [SwaggerResponse(500, "Internal server error.", typeof(ErrorResponse))]
     [SwaggerResponse(404, "Account not found.", typeof(ErrorResponse))]
     [SwaggerResponse(500, "Internal server error.", typeof(ErrorResponse))]
     public async Task<IActionResult> GetAccount([FromRoute] string accountId)
