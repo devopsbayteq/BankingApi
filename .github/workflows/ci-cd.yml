@@ -1,0 +1,388 @@
+name: CI/CD Pipeline — Banking API
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  SOLUTION_PATH: 'BankingApi.sln'
+  PROJECT_PATH: 'src/BankingApi/BankingApi.csproj'
+  TEST_PROJECT_PATH: 'tests/BankingApi.Tests/BankingApi.Tests.csproj'
+  PUBLISH_OUTPUT: 'publish'
+  EB_APP_NAME: 'bbol-poc-ssd-ia-api-01'
+  EB_ENV_NAME: 'Bbol-poc-ssd-ia-api-01-env'
+  AWS_REGION: 'us-east-1'
+
+# ============================================================
+# JOB 1 — BUILD
+# ============================================================
+jobs:
+  build:
+    name: 🔨 Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Build (Release)
+        run: |
+          dotnet build ${{ env.SOLUTION_PATH }} \
+            --configuration Release \
+            --no-restore \
+            -p:TreatWarningsAsErrors=true
+
+      - name: Publish artifact
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} \
+            --configuration Release \
+            --no-build \
+            --output ${{ env.PUBLISH_OUTPUT }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: banking-api-build
+          path: ${{ env.PUBLISH_OUTPUT }}
+          retention-days: 7
+
+# ============================================================
+# JOB 2 — TESTS
+# ============================================================
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Run unit & integration tests
+        run: |
+          dotnet test ${{ env.SOLUTION_PATH }} \
+            --configuration Release \
+            --no-restore \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --logger "trx;LogFileName=test-results.trx" \
+            --logger "console;verbosity=normal"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: TestResults/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: TestResults/**/coverage.cobertura.xml
+
+      - name: Code Coverage Summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        if: always()
+        with:
+          filename: 'TestResults/**/coverage.cobertura.xml'
+          badge: true
+          fail_below_min: false
+          format: markdown
+          output: both
+          thresholds: '60 80'
+
+      - name: Add coverage to PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
+
+# ============================================================
+# JOB 3 — STATIC CODE ANALYSIS (Roslyn Analyzers + StyleCop)
+# ============================================================
+  static-analysis:
+    name: 🔍 Static Analysis
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # SonarCloud needs full history
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Install dotnet-format tool
+        run: dotnet tool install -g dotnet-format
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Check code formatting (Roslyn)
+        run: |
+          dotnet format ${{ env.SOLUTION_PATH }} \
+            --verify-no-changes \
+            --severity warn \
+            --verbosity diagnostic
+
+      - name: Build with Roslyn analyzers
+        run: |
+          dotnet build ${{ env.SOLUTION_PATH }} \
+            --configuration Release \
+            --no-restore \
+            -p:RunAnalyzersDuringBuild=true \
+            -p:EnableNETAnalyzers=true \
+            -p:AnalysisMode=All \
+            -p:TreatWarningsAsErrors=false \
+            -warnAsError
+
+      # ----- SonarCloud (optional — requires secrets) -----
+      # - name: SonarCloud Scan
+      #  if: ${{ secrets.SONAR_TOKEN != '' }}
+      #  uses: SonarSource/sonarcloud-github-action@master
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #  with:
+      #    args: >
+      #      -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+      #      -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+      #      -Dsonar.sources=src/
+      #      -Dsonar.tests=tests/
+      #      -Dsonar.cs.opencover.reportsPaths=**/coverage.cobertura.xml
+      #      -Dsonar.cs.dotcover.reportsPaths=**/coverage.cobertura.xml
+
+# ============================================================
+# JOB 4 — SECURITY SCANNING
+# ============================================================
+  security:
+    name: 🔒 Security
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # --- NuGet vulnerability audit ---
+      - name: NuGet dependency vulnerability audit
+        run: |
+          dotnet restore ${{ env.SOLUTION_PATH }} \
+            --locked-mode || true
+          dotnet list ${{ env.SOLUTION_PATH }} package \
+            --vulnerable \
+            --include-transitive 2>&1 | tee vuln-report.txt
+          if grep -q "has the following vulnerable packages" vuln-report.txt; then
+            echo "::error::Vulnerable NuGet packages detected!"
+            cat vuln-report.txt
+            exit 1
+          fi
+
+      # --- OWASP Dependency-Check ---
+      - name: OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'BankingApi'
+          path: '.'
+          format: 'HTML'
+          out: 'dependency-check-report'
+          args: >
+            --enableRetired
+            --failOnCVSS 7
+        continue-on-error: true   # Non-blocking in mock project; set to false in production
+
+      - name: Upload OWASP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-dependency-check-report
+          path: dependency-check-report/
+
+      # --- Trivy filesystem scan ---
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'   # Report only; set to 1 to block on findings
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      # --- Secret scanning (Gitleaks) ---
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- CodeQL ---
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+
+      - name: Build for CodeQL
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:csharp'
+
+# ============================================================
+# JOB 5 — DEPLOY to AWS Elastic Beanstalk (main branch only)
+# ============================================================
+  deploy:
+    name: 🚀 Deploy to Elastic Beanstalk
+    runs-on: ubuntu-latest
+    needs: [build, test, static-analysis, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: http://${{ env.EB_ENV_NAME }}.elasticbeanstalk.com
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Publish application
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} \
+            --configuration Release \
+            --output ${{ env.PUBLISH_OUTPUT }}
+
+      - name: Create deployment ZIP
+        run: |
+          cd ${{ env.PUBLISH_OUTPUT }}
+          zip -r ../banking-api-${{ github.sha }}.zip .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Upload deployment bundle to S3
+        run: |
+          aws s3 cp banking-api-${{ github.sha }}.zip \
+            s3://${{ secrets.EB_S3_BUCKET }}/banking-api-${{ github.sha }}.zip
+
+      - name: Create Elastic Beanstalk application version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name ${{ env.EB_APP_NAME }} \
+            --version-label "v-${{ github.sha }}" \
+            --source-bundle S3Bucket="${{ secrets.EB_S3_BUCKET }}",S3Key="banking-api-${{ github.sha }}.zip" \
+            --description "Deploy from GitHub Actions — commit ${{ github.sha }}"
+
+      - name: Deploy to Elastic Beanstalk environment
+        run: |
+          aws elasticbeanstalk update-environment \
+            --application-name ${{ env.EB_APP_NAME }} \
+            --environment-name ${{ env.EB_ENV_NAME }} \
+            --version-label "v-${{ github.sha }}"
+
+      - name: Wait for deployment to complete
+        run: |
+          aws elasticbeanstalk wait environment-updated \
+            --application-name ${{ env.EB_APP_NAME }} \
+            --environment-names ${{ env.EB_ENV_NAME }}
+
+      - name: Verify deployment health
+        run: |
+          HEALTH=$(aws elasticbeanstalk describe-environments \
+            --application-name ${{ env.EB_APP_NAME }} \
+            --environment-names ${{ env.EB_ENV_NAME }} \
+            --query "Environments[0].Health" \
+            --output text)
+          echo "Environment health: $HEALTH"
+          if [ "$HEALTH" != "Green" ]; then
+            echo "::error::Deployment failed — environment health is $HEALTH"
+            exit 1
+          fi
+
+      - name: Notify deployment result
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          echo "Deployment finished with status: $STATUS"
+          echo "Commit: ${{ github.sha }}"
+          echo "Environment: ${{ env.EB_ENV_NAME }}"
